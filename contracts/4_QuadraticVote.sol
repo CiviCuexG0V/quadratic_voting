@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: no-license
 
 pragma solidity >=0.7.0 <0.9.0;
 
@@ -22,7 +22,7 @@ contract Ballot {
 
     address public chairperson;
 
-    mapping(address => Voter) public voters;
+    mapping(bytes32 => Voter) public voters;
 
     Proposal[] public proposals;
 
@@ -35,7 +35,6 @@ contract Ballot {
     constructor(bytes32[] memory proposalNames) {
         chairperson = msg.sender;
         weight = proposalNames.length * proposalNames.length - 1;
-        voters[chairperson].weight = weight;
 
         for (uint256 i = 0; i < proposalNames.length; i++) {
             // 'Proposal({...})' creates a temporary
@@ -49,7 +48,7 @@ contract Ballot {
      * @dev Give 'voter' the right to vote on this ballot. May only be called by 'chairperson'.
      * @param applicants address of applicant
      */
-    function giveRightToVote(address[] memory applicants) public {
+    function giveRightToVote(bytes32[] memory applicants) public {
         require(
             msg.sender == chairperson,
             "Only chairperson can give right to vote."
@@ -57,7 +56,7 @@ contract Ballot {
 
         // chairperson can give the right to vote to multiple voters at once to reduce gas
         for (uint256 i = 0; i < applicants.length; i++) {
-            address voter = applicants[i];
+            bytes32 voter = applicants[i];
             require(!voters[voter].voted, "Already voted.");
             require(voters[voter].weight == 0, "The voter already registered.");
             voters[voter].weight = weight;
@@ -83,8 +82,12 @@ contract Ballot {
      * @dev Give your vote (including votes delegated to you) to proposal 'proposals[v]'.
      * @param votes vote amount array
      */
-    function vote(uint256[] memory votes) public {
-        Voter storage sender = voters[msg.sender];
+    function vote(uint256[] memory votes, bytes32 voterId) public {
+        require(
+            msg.sender == chairperson,
+            "Only chairperson can give right to vote."
+        );
+        Voter storage sender = voters[voterId];
         require(sender.weight != 0, "Has no right to vote");
         require(!sender.voted, "Already voted.");
         sender.voted = true;
